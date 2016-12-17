@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Set<A> {
     items: Vec<A>,
 }
@@ -16,6 +16,10 @@ impl<A: Ord + Clone> PartialEq for Set<A> {
 }
 
 impl<A: Ord + Clone> Set<A> {
+
+    pub fn new(items: &Vec<A>) -> Set<A> {
+        Set { items: items.clone() }
+    }
 
     pub fn has(&self, l: &A) -> bool {
         self.items.iter().any(|x| x == l)
@@ -40,13 +44,14 @@ impl<A: Ord + Clone> Set<A> {
 }
 
 #[derive(Debug)]
-pub struct Relation<'a, A: 'a> {
-    links: &'a mut Vec<(A, A)>,
+pub struct Relation<A> {
+    set: Set<A>,
+    links: Vec<(A, A)>,
 }
 
-impl<'a, A: Ord + Clone + 'a> PartialEq for Relation<'a, A> {
+impl<A: Ord + Clone> PartialEq for Relation<A> {
 
-    fn eq(&self, other: &Relation<'a, A>) -> bool {
+    fn eq(&self, other: &Relation<A>) -> bool {
         let ref a = *self.links;
         if self.links.len() != other.links.len() { return false; }
         for item in a {
@@ -56,17 +61,21 @@ impl<'a, A: Ord + Clone + 'a> PartialEq for Relation<'a, A> {
     }
 }
 
-impl<'a, A: Ord + Clone + 'a> Relation<'a, A> {
+impl<A: Ord + Clone> Relation<A> {
+
+    pub fn new(set: &Set<A>, links: &Vec<(A, A)>) -> Relation<A> {
+        Relation { set: set.clone(), links: links.clone() }
+    }
 
     pub fn add_link(&mut self, l: (A, A)) {
-        if !self.has(&l) {
+        if !self.has(&l) && self.set.has(&l.0) && self.set.has(&l.1) {
             self.links.push(l);
         }
     }
 
     pub fn add_links(&mut self, ls: Vec<(A, A)>) {
         for l in ls {
-            if !self.has(&l) {
+            if !self.has(&l) && self.set.has(&l.0) && self.set.has(&l.1) {
                 self.add_link(l);
             }
         }
@@ -97,17 +106,17 @@ mod tests {
 
     #[test]
     fn test_union() {
-        let a = Set { items: vec![0, 1, 2, 3, 4, 5] };
-        let b = Set { items: vec![4, 5, 6, 7, 8, 9] };
-        let c = Set { items: vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9] };
+        let a = Set::new(&vec![0, 1, 2, 3, 4, 5]);
+        let b = Set::new(&vec![4, 5, 6, 7, 8, 9]);
+        let c = Set::new(&vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
         assert_eq!(a.union(&b), c);
     }
 
     #[test]
     fn test_inter() {
-        let a = Set { items: vec![0, 1, 2, 3, 4, 5] };
-        let b = Set { items: vec![4, 5, 6, 7, 8, 9] };
-        let c = Set { items: vec![4, 5] };
+        let a = Set::new(&vec![0, 1, 2, 3, 4, 5]);
+        let b = Set::new(&vec![4, 5, 6, 7, 8, 9]);
+        let c = Set::new(&vec![4, 5]);
         assert_eq!(a.inter(&b), c);
     }
 
@@ -120,19 +129,21 @@ mod tests {
 
     #[test]
     fn test_relation_eq() {
-        assert_eq!(Relation { links: &mut vec![(0, 1)] }, Relation { links: &mut vec![(0, 1)] });
-        assert_ne!(Relation { links: &mut vec![(0, 1)] }, Relation { links: &mut vec![(0, 2)] });
-        assert_ne!(Relation { links: &mut vec![(0, 2)] }, Relation { links: &mut Vec::new() });
+        let set = Set::new(&vec![0, 1, 2]);
+        assert_eq!(Relation::new(&set, &vec![(0, 1)]), Relation::new(&set, &vec![(0, 1)]));
+        assert_ne!(Relation::new(&set, &vec![(0, 1)]), Relation::new(&set, &vec![(0, 2)]));
+        assert_ne!(Relation::new(&set, &vec![(0, 2)]), Relation::new(&set, &Vec::new()));
 
-        let r1 = Relation { links: &mut vec![(1, 0), (0, 1)] };
-        let r2 = Relation { links: &mut vec![(0, 1), (1, 0)] };
+        let r1 = Relation::new(&set, &vec![(1, 0), (0, 1)]);
+        let r2 = Relation::new(&set, &vec![(0, 1), (1, 0)]);
         assert_eq!(r1, r2);
     }
 
     #[test]
     fn test_link() {
-        let mut a = Relation { links: &mut Vec::new() };
-        let b = Relation { links: &mut vec![(0, 1)] };
+        let set = Set::new(&vec![0, 1, 2]);
+        let mut a = Relation::new(&set, &Vec::new());
+        let b = Relation::new(&set, &vec![(0, 1)]);
         a.add_link((0, 1));
         a.add_link((0, 1));
         assert_eq!(b, a);
@@ -140,21 +151,21 @@ mod tests {
 
     #[test]
     fn test_has() {
-        let a = Relation { links: &mut vec![(0, 1)] };
+        let a = Relation::new(&Set::new(&vec![0, 1]), &vec![(0, 1)]);
         assert!(a.has(&(0, 1)));
         assert!(!a.has(&(1, 1)));
     }
 
     #[test]
     fn test_domain() {
-        let mut a = Relation { links: &mut vec![(0, 1)] };
+        let mut a = Relation::new(&Set::new(&vec![0, 1, 2, 3, 5]), &vec![(0, 1)]);
         a.add_links(vec![(1, 2), (2, 2), (3, 5)]);
         assert_eq!(a.domain(), vec![0, 1, 2, 3]);
     }
 
     #[test]
     fn test_codomain() {
-        let mut a = Relation { links: &mut vec![(0, 1)] };
+        let mut a = Relation::new(&Set::new(&vec![0, 1, 2, 3, 5]), &vec![(0, 1)]);
         a.add_links(vec![(1, 2), (2, 2), (3, 5)]);
         assert_eq!(a.codomain(), vec![1, 2, 5]);
     }
