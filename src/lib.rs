@@ -85,18 +85,41 @@ impl<A: Ord + Clone> Relation<A> {
         self.links.iter().any(|x| x == l)
     }
 
-    pub fn domain(&self) -> Vec<A> {
+    pub fn domain(&self) -> Set<A> {
         let mut a = self.links.iter().map(|x| x.0.clone()).collect::<Vec<A>>();
         a.sort();
         a.dedup();
-        a
+        Set { items: a }
     }
 
-    pub fn codomain(&self) -> Vec<A> {
+    pub fn codomain(&self) -> Set<A> {
         let mut a = self.links.iter().map(|x| x.1.clone()).collect::<Vec<A>>();
         a.sort();
         a.dedup();
-        a
+        Set { items: a }
+    }
+
+    pub fn is_reflexive(&self) -> bool {
+        self.set.items.iter().all(|x| self.has(&(x.clone(), x.clone())))
+    }
+
+    pub fn is_symmetric(&self) -> bool {
+        self.links.iter().all(|x| self.has(&(x.1.clone(), x.0.clone())))
+    }
+
+    pub fn is_transitive(&self) -> bool {
+        let test = self.set.items.iter();
+        for item1 in test.clone() {
+            for item2 in test.clone() {
+                if self.has(&(item1.clone(), item2.clone())) {
+                    if !test.clone().any(|x| self.has(&(item1.clone(), x.clone()))
+                                 && self.has(&(x.clone(), item2.clone()))) {
+                        return false;
+                    }
+                }
+            }
+        }
+        true
     }
 }
 
@@ -160,13 +183,37 @@ mod tests {
     fn test_domain() {
         let mut a = Relation::new(&Set::new(&vec![0, 1, 2, 3, 5]), &vec![(0, 1)]);
         a.add_links(vec![(1, 2), (2, 2), (3, 5)]);
-        assert_eq!(a.domain(), vec![0, 1, 2, 3]);
+        assert_eq!(a.domain(), Set::new(&vec![0, 1, 2, 3]));
     }
 
     #[test]
     fn test_codomain() {
         let mut a = Relation::new(&Set::new(&vec![0, 1, 2, 3, 5]), &vec![(0, 1)]);
         a.add_links(vec![(1, 2), (2, 2), (3, 5)]);
-        assert_eq!(a.codomain(), vec![1, 2, 5]);
+        assert_eq!(a.codomain(), Set::new(&vec![1, 2, 5]));
+    }
+
+    #[test]
+    fn test_reflexive() {
+        assert!(Relation::new(&Set::new(&vec![0, 1]), &vec![(0, 0), (0, 1), (1, 1)])
+                .is_reflexive());
+        assert!(!Relation::new(&Set::new(&vec![0, 1]), &vec![(0, 0), (0, 1), (1, 0)])
+                .is_reflexive());
+    }
+
+    #[test]
+    fn test_symmetric() {
+        assert!(Relation::new(&Set::new(&vec![0, 1]), &vec![(0, 0), (0, 1), (1, 0)])
+                .is_symmetric());
+        assert!(!Relation::new(&Set::new(&vec![0, 1]), &vec![(0, 0), (0, 1), (1, 1)])
+                .is_symmetric());
+    }
+
+    #[test]
+    fn test_transitive() {
+        assert!(Relation::new(&Set::new(&vec![0, 1]), &vec![(0, 0), (0, 1), (1, 0)])
+                .is_transitive());
+        assert!(!Relation::new(&Set::new(&vec![0, 1, 2]), &vec![(0, 0), (0, 1), (2, 1)])
+                .is_transitive());
     }
 }
