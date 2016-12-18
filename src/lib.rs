@@ -35,11 +35,17 @@ impl<A: Ord + Clone> Set<A> {
     }
 
     pub fn inter(&self, other: &Set<A>) -> Set<A> {
-        let mut v = Vec::new();
-        for item in self.items.iter() {
-            if other.has(&item) { v.push(item.clone()); }
-        }
-        Set { items: v }
+        Set::new(&self.items.iter()
+                 .filter(|x| other.has(&x))
+                 .map(|x| x.clone())
+                 .collect())
+    }
+
+    pub fn compl(&self, other: &Set<A>) -> Set<A> {
+        Set::new(&self.items.iter()
+                 .filter(|x| !other.has(&x))
+                 .map(|x| x.clone())
+                 .collect())
     }
 }
 
@@ -121,6 +127,35 @@ impl<A: Ord + Clone> Relation<A> {
         }
         true
     }
+
+    pub fn union(&self, other: &Relation<A>) -> Relation<A> {
+        let mut v = Vec::new();
+        v.extend_from_slice(self.links.as_slice());
+        v.extend_from_slice(other.links.as_slice());
+        v.sort();
+        v.dedup();
+        Relation { set: self.set.union(&other.set), links: v }
+    }        
+
+    pub fn inter(&self, other: &Relation<A>) -> Relation<A> {
+        Relation::new(
+            &self.set.inter(&other.set),
+            &self.links.iter()
+                       .filter(|x| other.has(&x))
+                       .map(|x| x.clone())
+                       .collect()
+        )
+    }
+
+    pub fn compl(&self, other: &Relation<A>) -> Relation<A> {
+        Relation::new(
+            &self.set.compl(&other.set),
+            &self.links.iter()
+                       .filter(|x| !other.has(&x))
+                       .map(|x| x.clone())
+                       .collect()
+        )
+    }
 }
 
 #[cfg(test)]
@@ -141,6 +176,14 @@ mod tests {
         let b = Set::new(&vec![4, 5, 6, 7, 8, 9]);
         let c = Set::new(&vec![4, 5]);
         assert_eq!(a.inter(&b), c);
+    }
+
+    #[test]
+    fn test_compl() {
+        let a = Set::new(&vec![0, 1, 2, 3, 4, 5]);
+        let b = Set::new(&vec![4, 5, 6, 7, 8, 9]);
+        let c = Set::new(&vec![0, 1, 2, 3]);
+        assert_eq!(a.compl(&b), c);
     }
 
     #[test]
@@ -215,5 +258,29 @@ mod tests {
                 .is_transitive());
         assert!(!Relation::new(&Set::new(&vec![0, 1, 2]), &vec![(0, 0), (0, 1), (2, 1)])
                 .is_transitive());
+    }
+
+    #[test]
+    fn test_relation_union() {
+        let a = Relation::new(&Set::new(&vec![0, 1, 2, 3, 4, 5]), &vec![(0, 0), (4, 5)]);
+        let b = Relation::new(&Set::new(&vec![4, 5, 6, 7, 8, 9]), &vec![(6, 6), (4, 5)]);
+        let c = Relation::new(&Set::new(&vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]), &vec![(0, 0), (4, 5), (6, 6)]);
+        assert_eq!(a.union(&b), c);
+    }
+
+    #[test]
+    fn test_relation_inter() {
+        let a = Relation::new(&Set::new(&vec![0, 1, 2, 3, 4, 5]), &vec![(0, 0), (4, 5)]);
+        let b = Relation::new(&Set::new(&vec![4, 5, 6, 7, 8, 9]), &vec![(6, 6), (4, 5)]);
+        let c = Relation::new(&Set::new(&vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]), &vec![(4, 5)]);
+        assert_eq!(a.inter(&b), c);
+    }
+
+    #[test]
+    fn test_relation_compl() {
+        let a = Relation::new(&Set::new(&vec![0, 1, 2, 3, 4, 5]), &vec![(0, 0), (4, 5)]);
+        let b = Relation::new(&Set::new(&vec![4, 5, 6, 7, 8, 9]), &vec![(6, 6), (4, 5)]);
+        let c = Relation::new(&Set::new(&vec![0, 1, 2, 3]), &vec![(0, 0)]);
+        assert_eq!(a.compl(&b), c);
     }
 }
