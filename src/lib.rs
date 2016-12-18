@@ -24,6 +24,10 @@ impl<A: Ord + Clone> Set<A> {
     pub fn has(&self, l: &A) -> bool {
         self.items.iter().any(|x| x == l)
     }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
 }
 
 pub fn union<A: Clone + Ord>(this: &Set<A>, that: &Set<A>) -> Set<A> {
@@ -91,18 +95,36 @@ impl<A: Ord + Clone> Relation<A> {
         self.links.iter().any(|x| x == l)
     }
 
+    pub fn neighbours(&self, v: &A) -> Set<A> {
+        let mut a = Vec::new();
+        for item in self.links.iter() {
+            if item.0 == *v {
+                a.push(item.0.clone());
+            } else if item.1 == *v {
+                a.push(item.1.clone());
+            }
+        }
+        a.sort();
+        a.dedup();
+        Set::new(&a)
+    }
+
+    pub fn degree(&self, v: &A) -> usize {
+        self.neighbours(v).len()
+    }
+
     pub fn domain(&self) -> Set<A> {
         let mut a = self.links.iter().map(|x| x.0.clone()).collect::<Vec<A>>();
         a.sort();
         a.dedup();
-        Set { items: a }
+        Set::new(&a)
     }
 
     pub fn codomain(&self) -> Set<A> {
         let mut a = self.links.iter().map(|x| x.1.clone()).collect::<Vec<A>>();
         a.sort();
         a.dedup();
-        Set { items: a }
+        Set::new(&a)
     }
 
     pub fn is_reflexive(&self) -> bool {
@@ -127,6 +149,23 @@ impl<A: Ord + Clone> Relation<A> {
         }
         true
     }
+
+    pub fn ref_closure(&self) -> Relation<A> {
+        let mut v = Vec::new();
+        v.extend_from_slice(self.links.as_slice());
+        for k in self.set.items.iter() {
+            for i in self.set.items.iter() {
+                for j in self.set.items.iter() {
+                    if !self.has(&(i.clone(), j.clone()))
+                       && self.has(&(i.clone(), k.clone()))
+                       && self.has(&(k.clone(), j.clone())) {
+                           v.push((i.clone(), j.clone()));
+                    }
+                }
+            }
+        }
+        Relation::new(&self.set, &v)
+    }
 }
 
 pub fn rel_union<A: Clone + Ord>(this: &Relation<A>, that: &Relation<A>) -> Relation<A> {
@@ -135,7 +174,7 @@ pub fn rel_union<A: Clone + Ord>(this: &Relation<A>, that: &Relation<A>) -> Rela
     v.extend_from_slice(that.links.as_slice());
     v.sort();
     v.dedup();
-    Relation { set: union(&this.set, &that.set), links: v }
+    Relation::new(&union(&this.set, &that.set), &v)
 }        
 
 pub fn rel_inter<A: Clone + Ord>(this: &Relation<A>, that: &Relation<A>) -> Relation<A> {
@@ -156,6 +195,16 @@ pub fn rel_compl<A: Clone + Ord>(this: &Relation<A>, that: &Relation<A>) -> Rela
         .map(|x| x.clone())
         .collect()
         )
+}
+
+pub fn rel_compo<A: Clone + Ord>(this: &Relation<A>, that: &Relation<A>) -> Relation<A> {
+    let mut v = Vec::new();
+    for item in this.links.iter() {
+        for item2 in that.links.iter().filter(|x| x.0 == item.1) {
+            v.push((item.0.clone(), item2.1.clone()));
+        }
+    }
+    Relation::new(&union(&this.domain(), &that.codomain()), &v)
 }
 
 #[cfg(test)]
@@ -282,5 +331,20 @@ mod tests {
         let b = Relation::new(&Set::new(&vec![4, 5, 6, 7, 8, 9]), &vec![(6, 6), (4, 5)]);
         let c = Relation::new(&Set::new(&vec![0, 1, 2, 3]), &vec![(0, 0)]);
         assert_eq!(rel_compl(&a, &b), c);
+    }
+
+    #[test]
+    fn test_relation_compo() {
+        let a = Relation::new(&Set::new(&vec![0, 1, 2, 3, 4, 5]), &vec![(0, 1), (1, 1)]);
+        let b = Relation::new(&Set::new(&vec![4, 5, 6, 7, 8, 9]), &vec![(1, 2), (1, 3)]);
+        let c = Relation::new(&Set::new(&vec![0, 1, 2, 3]), &vec![(0, 2), (0, 3), (1, 2), (1, 3)]);
+        assert_eq!(rel_compo(&a, &b), c);
+    }
+
+    #[test]
+    fn test_closure() {
+        let r = Relation::new(&Set::new(&vec![0, 1, 2, 3]), &vec![(0, 0), (0, 1), (1, 3), (2, 1)]);
+        let q = Relation::new(&Set::new(&vec![0, 1, 2, 3]), &vec![(0, 0), (0, 1), (1, 3), (2, 1), (0, 3), (2, 3)]);
+        assert_eq!(r.ref_closure(), q);
     }
 }
