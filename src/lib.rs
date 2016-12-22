@@ -166,6 +166,16 @@ impl<A: Ord + Clone> Relation<A> {
         }
         Relation::new(&self.set, &v)
     }
+
+    pub fn sym_closure(&self) -> Relation<A> {
+        let mut v = Vec::new();
+        v.extend_from_slice(self.links.as_slice());
+        let mut v = Relation::new(&self.set, &v);
+        for i in self.links.iter() {
+            v.add_link((i.1.clone(), i.0.clone()));
+        }
+        v
+    }
 }
 
 pub fn rel_union<A: Clone + Ord>(this: &Relation<A>, that: &Relation<A>) -> Relation<A> {
@@ -342,9 +352,16 @@ mod tests {
     }
 
     #[test]
-    fn test_closure() {
+    fn test_ref_closure() {
         let r = Relation::new(&Set::new(&vec![0, 1, 2, 3]), &vec![(0, 0), (0, 1), (1, 3), (2, 1)]);
         let q = Relation::new(&Set::new(&vec![0, 1, 2, 3]), &vec![(0, 0), (0, 1), (1, 3), (2, 1), (0, 3), (2, 3)]);
         assert_eq!(r.ref_closure(), q);
+    }
+
+    #[test]
+    fn test_sym_closure() {
+        let r = Relation::new(&Set::new(&vec![0, 1, 2, 3]), &vec![(0, 0), (0, 1), (1, 3), (2, 1)]);
+        let q = Relation::new(&Set::new(&vec![0, 1, 2, 3]), &vec![(0, 0), (0, 1), (1, 3), (2, 1), (1, 0), (3, 1), (1, 2)]);
+        assert_eq!(r.sym_closure(), q);
     }
 }
