@@ -1,11 +1,11 @@
 #[derive(Debug, Clone)]
-pub struct Set<A> {
-    items: Vec<A>,
+pub struct Set<T> {
+    items: Vec<T>,
 }
 
-impl<A: Ord + Clone> PartialEq for Set<A> {
+impl<T: Ord + Clone> PartialEq for Set<T> {
 
-    fn eq(&self, other: &Set<A>) -> bool {
+    fn eq(&self, other: &Set<T>) -> bool {
         let ref a = *self.items;
         if self.items.len() != other.items.len() { return false; }
         for item in a {
@@ -15,13 +15,13 @@ impl<A: Ord + Clone> PartialEq for Set<A> {
     }
 }
 
-impl<A: Ord + Clone> Set<A> {
+impl<T: Ord + Clone> Set<T> {
 
-    pub fn new(items: &Vec<A>) -> Set<A> {
+    pub fn new(items: &Vec<T>) -> Set<T> {
         Set { items: items.clone() }
     }
 
-    pub fn has(&self, l: &A) -> bool {
+    pub fn has(&self, l: &T) -> bool {
         self.items.iter().any(|x| x == l)
     }
 
@@ -30,7 +30,21 @@ impl<A: Ord + Clone> Set<A> {
     }
 }
 
-pub fn union<A: Clone + Ord>(this: &Set<A>, that: &Set<A>) -> Set<A> {
+/// Creates a `Set<T>` that is the union of two `Set<T>`.
+///
+/// The union of two `Set<T>`, R and S, is the `Set<T>` whose elements
+/// belong either to R or to S or to both.
+///
+/// # Examples
+///
+/// ```Rust
+/// use relations;
+/// let a = Set::new(&vec![0, 1, 2, 3, 4, 5]);
+/// let b = Set::new(&vec![4, 5, 6, 7, 8, 9]);
+/// let c = Set::new(&vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+/// assert_eq!(union(&a, &b), c);
+/// ```
+pub fn union<T: Clone + Ord>(this: &Set<T>, that: &Set<T>) -> Set<T> {
     let mut v = Vec::new();
     v.extend_from_slice(this.items.as_slice());
     v.extend_from_slice(that.items.as_slice());
@@ -39,14 +53,14 @@ pub fn union<A: Clone + Ord>(this: &Set<A>, that: &Set<A>) -> Set<A> {
     Set { items: v }
 }
 
-pub fn inter<A: Clone + Ord>(this: &Set<A>, that: &Set<A>) -> Set<A> {
+pub fn inter<T: Clone + Ord>(this: &Set<T>, that: &Set<T>) -> Set<T> {
     Set::new(&this.items.iter()
              .filter(|x| that.has(&x))
              .map(|x| x.clone())
              .collect())
 }
 
-pub fn compl<A: Clone + Ord>(this: &Set<A>, that: &Set<A>) -> Set<A> {
+pub fn compl<T: Clone + Ord>(this: &Set<T>, that: &Set<T>) -> Set<T> {
     Set::new(&this.items.iter()
              .filter(|x| !that.has(&x))
              .map(|x| x.clone())
@@ -54,14 +68,14 @@ pub fn compl<A: Clone + Ord>(this: &Set<A>, that: &Set<A>) -> Set<A> {
 }
 
 #[derive(Debug)]
-pub struct Relation<A> {
-    set: Set<A>,
-    links: Vec<(A, A)>,
+pub struct Relation<T> {
+    set: Set<T>,
+    links: Vec<(T, T)>,
 }
 
-impl<A: Ord + Clone> PartialEq for Relation<A> {
+impl<T: Ord + Clone> PartialEq for Relation<T> {
 
-    fn eq(&self, other: &Relation<A>) -> bool {
+    fn eq(&self, other: &Relation<T>) -> bool {
         let ref a = *self.links;
         if self.links.len() != other.links.len() { return false; }
         for item in a {
@@ -71,19 +85,19 @@ impl<A: Ord + Clone> PartialEq for Relation<A> {
     }
 }
 
-impl<A: Ord + Clone> Relation<A> {
+impl<T: Ord + Clone> Relation<T> {
 
-    pub fn new(set: &Set<A>, links: &Vec<(A, A)>) -> Relation<A> {
+    pub fn new(set: &Set<T>, links: &Vec<(T, T)>) -> Relation<T> {
         Relation { set: set.clone(), links: links.clone() }
     }
 
-    pub fn add_link(&mut self, l: (A, A)) {
+    pub fn add_link(&mut self, l: (T, T)) {
         if !self.has(&l) && self.set.has(&l.0) && self.set.has(&l.1) {
             self.links.push(l);
         }
     }
 
-    pub fn add_links(&mut self, ls: Vec<(A, A)>) {
+    pub fn add_links(&mut self, ls: Vec<(T, T)>) {
         for l in ls {
             if !self.has(&l) && self.set.has(&l.0) && self.set.has(&l.1) {
                 self.add_link(l);
@@ -91,11 +105,11 @@ impl<A: Ord + Clone> Relation<A> {
         }
     }
 
-    pub fn has(&self, l: &(A, A)) -> bool {
+    pub fn has(&self, l: &(T, T)) -> bool {
         self.links.iter().any(|x| x == l)
     }
 
-    pub fn neighbours(&self, v: &A) -> Set<A> {
+    pub fn neighbours(&self, v: &T) -> Set<T> {
         let mut a = Vec::new();
         for item in self.links.iter() {
             if item.0 == *v {
@@ -109,19 +123,19 @@ impl<A: Ord + Clone> Relation<A> {
         Set::new(&a)
     }
 
-    pub fn degree(&self, v: &A) -> usize {
+    pub fn degree(&self, v: &T) -> usize {
         self.neighbours(v).len()
     }
 
-    pub fn domain(&self) -> Set<A> {
-        let mut a = self.links.iter().map(|x| x.0.clone()).collect::<Vec<A>>();
+    pub fn domain(&self) -> Set<T> {
+        let mut a = self.links.iter().map(|x| x.0.clone()).collect::<Vec<T>>();
         a.sort();
         a.dedup();
         Set::new(&a)
     }
 
-    pub fn codomain(&self) -> Set<A> {
-        let mut a = self.links.iter().map(|x| x.1.clone()).collect::<Vec<A>>();
+    pub fn codomain(&self) -> Set<T> {
+        let mut a = self.links.iter().map(|x| x.1.clone()).collect::<Vec<T>>();
         a.sort();
         a.dedup();
         Set::new(&a)
@@ -150,24 +164,24 @@ impl<A: Ord + Clone> Relation<A> {
         true
     }
 
-    pub fn ref_closure(&self) -> Relation<A> {
+    pub fn ref_closure(&self) -> Relation<T> {
         let mut v = Vec::new();
         v.extend_from_slice(self.links.as_slice());
         for k in self.set.items.iter() {
             for i in self.set.items.iter() {
                 for j in self.set.items.iter() {
                     if !self.has(&(i.clone(), j.clone()))
-                       && self.has(&(i.clone(), k.clone()))
-                       && self.has(&(k.clone(), j.clone())) {
-                           v.push((i.clone(), j.clone()));
-                    }
+                        && self.has(&(i.clone(), k.clone()))
+                            && self.has(&(k.clone(), j.clone())) {
+                                v.push((i.clone(), j.clone()));
+                            }
                 }
             }
         }
         Relation::new(&self.set, &v)
     }
 
-    pub fn sym_closure(&self) -> Relation<A> {
+    pub fn sym_closure(&self) -> Relation<T> {
         let mut v = Vec::new();
         v.extend_from_slice(self.links.as_slice());
         let mut v = Relation::new(&self.set, &v);
@@ -178,7 +192,7 @@ impl<A: Ord + Clone> Relation<A> {
     }
 }
 
-pub fn rel_union<A: Clone + Ord>(this: &Relation<A>, that: &Relation<A>) -> Relation<A> {
+pub fn rel_union<T: Clone + Ord>(this: &Relation<T>, that: &Relation<T>) -> Relation<T> {
     let mut v = Vec::new();
     v.extend_from_slice(this.links.as_slice());
     v.extend_from_slice(that.links.as_slice());
@@ -187,7 +201,7 @@ pub fn rel_union<A: Clone + Ord>(this: &Relation<A>, that: &Relation<A>) -> Rela
     Relation::new(&union(&this.set, &that.set), &v)
 }        
 
-pub fn rel_inter<A: Clone + Ord>(this: &Relation<A>, that: &Relation<A>) -> Relation<A> {
+pub fn rel_inter<T: Clone + Ord>(this: &Relation<T>, that: &Relation<T>) -> Relation<T> {
     Relation::new(
         &inter(&this.set, &that.set),
         &this.links.iter()
@@ -197,7 +211,7 @@ pub fn rel_inter<A: Clone + Ord>(this: &Relation<A>, that: &Relation<A>) -> Rela
         )
 }
 
-pub fn rel_compl<A: Clone + Ord>(this: &Relation<A>, that: &Relation<A>) -> Relation<A> {
+pub fn rel_compl<T: Clone + Ord>(this: &Relation<T>, that: &Relation<T>) -> Relation<T> {
     Relation::new(
         &compl(&this.set, &that.set),
         &this.links.iter()
@@ -207,7 +221,7 @@ pub fn rel_compl<A: Clone + Ord>(this: &Relation<A>, that: &Relation<A>) -> Rela
         )
 }
 
-pub fn rel_compo<A: Clone + Ord>(this: &Relation<A>, that: &Relation<A>) -> Relation<A> {
+pub fn rel_compo<T: Clone + Ord>(this: &Relation<T>, that: &Relation<T>) -> Relation<T> {
     let mut v = Vec::new();
     for item in this.links.iter() {
         for item2 in that.links.iter().filter(|x| x.0 == item.1) {
