@@ -3,4 +3,8 @@ name = "relations"
 version = "0.1.0"
 authors = ["Roland Baumann <r.dddib.b@gmail.com>"]
 
+[lib]
+name = "relations"
+path = "src/lib.rs"
+
 [dependencies]
