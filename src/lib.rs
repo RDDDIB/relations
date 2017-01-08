@@ -36,6 +36,11 @@ impl<T: Ord + Clone> Set<T> {
     pub fn len(&self) -> usize {
         self.items.len()
     }
+
+    /// Creates a `slice` containing the objects.
+    pub fn as_slice(&self) -> &[T] {
+        self.items.as_slice()
+    }
 }
 
 /// Creates a `Set<T>` that is the union of two `Set<T>`.
