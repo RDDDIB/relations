@@ -160,12 +160,29 @@ impl<T: Ord + Clone> Relation<T> {
     /// Creates a `Set<T>` containing all objects to which the given object
     /// is linked.
     pub fn neighbours(&self, v: &T) -> Set<T> {
+        union(&self.links_to(&v), &self.links_from(&v))
+    }
+
+    /// Creates a `Set<T>` containing all objects to which the given object reaches.
+    pub fn links_to(&self, v: &T) -> Set<T> {
         let mut a = Vec::new();
         for item in self.links.iter() {
             if item.0 == *v {
-                a.push(item.0.clone());
-            } else if item.1 == *v {
                 a.push(item.1.clone());
+            }
+        }
+        a.sort();
+        a.dedup();
+        Set::new(&a)
+    }
+
+    /// Creates a `Set<T>` containing all objects from which the given object is
+    /// reachable.
+    pub fn links_from(&self, v: &T) -> Set<T> {
+        let mut a = Vec::new();
+        for item in self.links.iter() {
+            if item.1 == *v {
+                a.push(item.0.clone());
             }
         }
         a.sort();
