@@ -37,9 +37,9 @@ impl<T: Ord + Clone> Set<T> {
         self.items.len()
     }
 
-    /// Creates a `slice` containing the objects.
-    pub fn as_slice(&self) -> &[T] {
-        self.items.as_slice()
+    /// Creates a `vec` containing the objects.
+    pub fn as_vec(&self) -> Vec<T> {
+        self.items.clone()
     }
 }
 
